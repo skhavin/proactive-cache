@@ -22,6 +22,13 @@ from typing import Optional
 from .eviction import score_tokens
 
 
+# Shim for Python 3.13+ which removed the 'pipes' module (needed by fire/kvpress)
+try:
+    import pipes
+except ImportError:
+    import sys, shlex
+    sys.modules['pipes'] = shlex
+
 # ── KVPress BasePress compatibility shim ─────────────────────────────────────
 try:
     from kvpress import BasePress
