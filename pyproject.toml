@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "proactive-cache"
+version = "0.1.0"
+description = "Make any HuggingFace transformer O(n) with proactive KV cache eviction"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "S Khavin", email = "skhavin.res@gmail.com" }]
+keywords = ["llm", "kv-cache", "inference", "transformers", "efficiency", "attention"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU Affero General Public License v3 (AGPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "torch>=2.1.0",
+    "transformers>=4.38.0",
+    "numpy>=1.24.0",
+    "scikit-learn>=1.3.0",
+    "tqdm>=4.65.0",
+    "datasets>=2.14.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-cov", "ruff"]
+kvpress = ["kvpress"]
+gradio = ["gradio>=4.0", "spaces"]
+
+[project.urls]
+Homepage = "https://github.com/skhavin/proactive-cache"
+Repository = "https://github.com/skhavin/proactive-cache"
+"Bug Tracker" = "https://github.com/skhavin/proactive-cache/issues"
+Paper = "https://github.com/skhavin/supertransformers"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["proactive_cache*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
