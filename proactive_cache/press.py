@@ -29,14 +29,14 @@ except ImportError:
     import sys, shlex
     sys.modules['pipes'] = shlex
 
-# ── KVPress BasePress compatibility shim ─────────────────────────────────────
+# ── KVPress ScorerPress compatibility shim ────────────────────────────────────
 try:
-    from kvpress import BasePress
+    from kvpress import ScorerPress
     _KVPRESS_AVAILABLE = True
 except ImportError:
     _KVPRESS_AVAILABLE = False
 
-    class BasePress:
+    class ScorerPress:
         """Minimal shim — allows import without kvpress installed."""
         def __init__(self):
             self.compression_ratio = 0.0
@@ -46,7 +46,7 @@ except ImportError:
 
 
 @dataclass
-class ProactiveCachePress(BasePress):
+class ProactiveCachePress(ScorerPress):
     """
     KVPress-compatible Proactive KV Cache eviction plugin.
 
