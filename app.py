@@ -4,9 +4,9 @@ app.py — Interactive HuggingFace Space & Gradio Demo for ProactiveCache.
 Provides:
   1. Interactive Token Eviction Simulator: Shows which tokens are kept (glowing green/blue)
      or evicted (faded red with strikethrough) at each step of decoding.
-  2. Performance Dashboard: Real-time O(n) vs O(n2) VRAM and Speedup metrics.
+  2. Performance Dashboard: Real-time constant O(1) step vs quadratic O(n2) VRAM and Speedup metrics.
   3. Live Model Profiling & Run (GPU only): Run actual Qwen/Llama models with ProactiveCache!
-  4. Quickstart Integration Guide: Copy-paste snippets to make any transformers O(n).
+  4. Quickstart Integration Guide: Copy-paste snippets to enable O(1) step attention.
 """
 
 from __future__ import annotations
@@ -282,7 +282,7 @@ with gr.Blocks(theme=gr.themes.Default(), css=THEME_CSS) as demo:
         """
         <div style="text-align: center; margin-top: 15px;">
             <h1 class="neon-title">⚡ PROACTIVE KV CACHE</h1>
-            <p class="neon-subtitle">Make any HuggingFace Transformer O(n) with Offline Spatial Prototypes</p>
+            <p class="neon-subtitle">O(1) Decode-Step Attention for Any Transformer via Training-Free Proactive KV Cache Eviction</p>
         </div>
         """
     )
@@ -363,13 +363,13 @@ with gr.Blocks(theme=gr.themes.Default(), css=THEME_CSS) as demo:
                     gr.HTML(
                         """
                         <div style="background: rgba(22,27,34,0.5); border: 1px solid #30363d; border-radius: 8px; padding: 15px; margin-top: 15px;">
-                            <h4 style="margin: 0 0 10px 0; color: #58a6ff; font-size: 14px;">Why Proactive Cache is O(n)?</h4>
+                            <h4 style="margin: 0 0 10px 0; color: #58a6ff; font-size: 14px;">Why does Proactive Cache make decode step O(1)?</h4>
                             <p style="font-size: 12px; margin: 0; line-height: 1.4; color: #8b949e;">
-                                Standard cache pruning strategies like SnapKV or Knorm calculate dynamic scores at 
-                                every single decode step using current token queries (O(n) per token, O(n2) total). 
-                                <b>Proactive Cache</b> clusters attention patterns offline once, generating spatial 
-                                profiles. At inference time, we score token positions <i>unconditionally</i>, 
-                                keeping overall complexity perfectly linear at O(n) with zero runtime query overhead!
+                                Standard cache pruning strategies (SnapKV, H2O) calculate query-key scores at 
+                                every single decode step, resulting in O(n) attention cost per step and overall quadratic complexity. 
+                                <b>Proactive Cache</b> learns token importance patterns offline once. During generation, 
+                                each decode step only attends to a fixed constant budget <i>B</i> of key-value tokens, 
+                                reducing the per-step attention calculation to <b>O(1) constant time</b> with absolutely zero query matching overhead!
                             </p>
                         </div>
                         """
