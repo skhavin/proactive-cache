@@ -42,6 +42,24 @@ body, .gradio-container {
     color: #c9d1d9 !important;
     font-family: 'Outfit', 'Inter', -apple-system, sans-serif !important;
 }
+/* Fix black text on dark background in inputs, textareas, and dropdowns */
+input, textarea, select, 
+.gradio-container input, .gradio-container textarea, .gradio-container select,
+.gr-input-element, .gr-text-input, input[type="text"],
+.svelte-1kv82n1, .svelte-12y49lh, .svelte-1456g8u {
+    background-color: #161b22 !important;
+    color: #f0f6fc !important;
+    border: 1px solid #30363d !important;
+}
+input:focus, textarea:focus, select:focus {
+    border-color: #58a6ff !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.3) !important;
+}
+::placeholder, .gradio-container ::placeholder {
+    color: #8b949e !important;
+    opacity: 0.8 !important;
+}
 .glass-panel {
     background: rgba(22, 27, 34, 0.7) !important;
     border: 1px solid rgba(48, 54, 61, 0.8) !important;
