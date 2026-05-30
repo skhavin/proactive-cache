@@ -37,6 +37,8 @@ if HAS_TRANSFORMERS:
 
 # ── CSS THEME & CUSTOM STYLING ───────────────────────────────────────────────
 THEME_CSS = """
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Outfit:wght@300;400;500;600;700&display=swap');
+
 body, .gradio-container {
     background: #0d1117 !important;
     color: #c9d1d9 !important;
@@ -60,6 +62,42 @@ input:focus, textarea:focus, select:focus {
     color: #8b949e !important;
     opacity: 0.8 !important;
 }
+/* --- COMPREHENSIVE TEXT READABILITY OVERRIDES --- */
+.gradio-container .prose p,
+.gradio-container .prose span,
+.gradio-container .prose li,
+.gradio-container .prose strong,
+.gradio-container .prose ol,
+.gradio-container .prose ul,
+.gradio-container p,
+.gradio-container li {
+    color: #e2e8f0 !important; /* Elegant Slate-200 */
+}
+.gradio-container code,
+.gradio-container .prose code {
+    color: #38bdf8 !important; /* Beautiful light sky-blue for contrast */
+    background-color: #1e293b !important; /* Slate-800 background */
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    font-weight: 600 !important;
+}
+.gradio-container label,
+.gradio-container .block-title,
+.gradio-container .block-label,
+.gradio-container label span,
+.gradio-container .block-title span,
+.gradio-container .block-label span,
+.gradio-container .svelte-1hguek3 span,
+.gradio-container .svelte-1xfsv4t span,
+.gradio-container .svelte-8epfm4 {
+    color: #f1f5f9 !important; /* Crisp Slate-100 */
+    font-weight: 600 !important;
+}
+.gradio-container textarea::placeholder,
+.gradio-container input::placeholder,
+.gradio-container textarea.svelte-1hguek3::placeholder {
+    color: #64748b !important; /* Slate-500 placeholder */
+}
 .glass-panel {
     background: rgba(22, 27, 34, 0.7) !important;
     border: 1px solid rgba(48, 54, 61, 0.8) !important;
@@ -68,12 +106,13 @@ input:focus, textarea:focus, select:focus {
     backdrop-filter: blur(10px) !important;
 }
 .neon-title {
-    background: linear-gradient(135deg, #58a6ff, #bc8cff) !important;
+    font-family: 'Playfair Display', Georgia, Cambria, 'Times New Roman', serif !important;
+    background: linear-gradient(135deg, #a5f3fc, #0284c7) !important;
     -webkit-background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
     font-weight: 800 !important;
     letter-spacing: -0.5px !important;
-    font-size: 2.5rem !important;
+    font-size: 2.7rem !important;
     text-align: center !important;
     margin-bottom: 5px !important;
 }
@@ -121,11 +160,11 @@ input:focus, textarea:focus, select:focus {
     box-shadow: 0 0 8px rgba(57, 255, 20, 0.15) !important;
 }
 .tok-evict {
-    background: rgba(248, 81, 73, 0.05) !important;
-    border: 1px dashed rgba(248, 81, 73, 0.3) !important;
-    color: #8b949e !important;
+    background: rgba(248, 81, 73, 0.03) !important;
+    border: 1px dashed rgba(248, 81, 73, 0.4) !important;
+    color: #cbd5e1 !important;
     text-decoration: line-through !important;
-    opacity: 0.5 !important;
+    opacity: 0.65 !important;
 }
 .metric-card {
     background: rgba(22, 27, 34, 0.5);
@@ -175,6 +214,28 @@ MOCK_TEXTS = {
 }
 
 
+def build_token_html(tokens, keep_indices, num_sinks, seq_len, recency_window, scores):
+    html_out = ['<div class="token-container">']
+    for idx, tok in enumerate(tokens):
+        # Escape HTML chars
+        safe_tok = tok.replace("<", "&lt;").replace(">", "&gt;")
+        
+        if idx in keep_indices:
+            if idx < num_sinks:
+                # Attention Sink
+                html_out.append(f'<span class="tok tok-keep-sink" title="Attention Sink (Score: {scores[idx]:.1f})">{safe_tok}</span>')
+            elif idx >= seq_len - recency_window:
+                # Recency Anchor
+                html_out.append(f'<span class="tok tok-keep-recent" title="Recency Anchor (Score: {scores[idx]:.1f})">{safe_tok}</span>')
+            else:
+                # Semantic Prototype / Keep
+                html_out.append(f'<span class="tok tok-keep-proto" title="Semantic Keep (Score: {scores[idx]:.1f})">{safe_tok}</span>')
+        else:
+            html_out.append(f'<span class="tok tok-evict" title="Evicted (Score: {scores[idx]:.1f})">{safe_tok}</span>')
+    html_out.append("</div>")
+    return "".join(html_out)
+
+
 def run_simulator(prompt_choice, prompt_custom, compression_ratio, budget):
     """
     Mocks and visualizes token cache eviction step-by-step.
@@ -198,22 +259,20 @@ def run_simulator(prompt_choice, prompt_custom, compression_ratio, budget):
         actual_budget = max(1, int(seq_len * (1.0 - compression_ratio)))
     actual_budget = min(actual_budget, seq_len)
 
-    # Initialize scores
-    scores = np.zeros(seq_len)
-
-    # 1. Define Attention Sinks (first min(2, seq_len) tokens)
+    # Common parameters
     num_sinks = min(2, seq_len)
+
+    # ─── METHOD 1: PROACTIVE CACHE (O(1) Step Attention, Ours) ───
+    scores = np.zeros(seq_len)
     for idx in range(num_sinks):
         scores[idx] = 100.0 - idx * 10.0
 
-    # 2. Define Recency Window (last tokens)
     recency_window = max(1, min(seq_len - num_sinks, actual_budget // 8)) if seq_len > num_sinks else 0
     for i in range(recency_window):
         idx = seq_len - 1 - i
         if idx >= num_sinks:
             scores[idx] = 50.0 - i * 5.0
 
-    # 3. Define Semantic Prototypes for some of the remaining mid-tokens
     mid_start = num_sinks
     mid_end = seq_len - recency_window
     mid_len = mid_end - mid_start
@@ -231,28 +290,74 @@ def run_simulator(prompt_choice, prompt_custom, compression_ratio, budget):
             for idx in proto_indices:
                 scores[idx] = 40.0 + np.random.uniform(-5, 5)
 
-    # Deterministic selection based on budget
-    keep_indices = set(np.argsort(scores)[-actual_budget:])
+    proactive_keep = set(np.argsort(scores)[-actual_budget:])
+    proactive_html = build_token_html(tokens, proactive_keep, num_sinks, seq_len, recency_window, scores)
 
-    # Generate beautiful HTML output
-    html_out = ['<div class="token-container">']
-    for idx, tok in enumerate(tokens):
-        # Escape HTML chars
-        safe_tok = tok.replace("<", "&lt;").replace(">", "&gt;")
-        
-        if idx in keep_indices:
-            if idx < num_sinks:
-                # Attention Sink
-                html_out.append(f'<span class="tok tok-keep-sink" title="Attention Sink (Score: {scores[idx]:.1f})">{safe_tok}</span>')
-            elif idx >= seq_len - recency_window:
-                # Recency Anchor
-                html_out.append(f'<span class="tok tok-keep-recent" title="Recency Anchor (Score: {scores[idx]:.1f})">{safe_tok}</span>')
-            else:
-                # Semantic Prototype
-                html_out.append(f'<span class="tok tok-keep-proto" title="Semantic Prototype (Score: {scores[idx]:.1f})">{safe_tok}</span>')
-        else:
-            html_out.append(f'<span class="tok tok-evict" title="Evicted (Score: {scores[idx]:.1f})">{safe_tok}</span>')
-    html_out.append("</div>")
+    # ─── METHOD 2: STREAMINGLLM (O(1) Step Attention, Sinks + Recency) ───
+    streaming_keep = set()
+    for idx in range(num_sinks):
+        streaming_keep.add(idx)
+    remaining_budget = max(0, actual_budget - num_sinks)
+    for i in range(remaining_budget):
+        idx = seq_len - 1 - i
+        if idx >= num_sinks:
+            streaming_keep.add(idx)
+    streaming_scores = np.zeros(seq_len)
+    for idx in streaming_keep:
+        streaming_scores[idx] = 100.0 if idx < num_sinks else 50.0
+    streaming_html = build_token_html(tokens, streaming_keep, num_sinks, seq_len, actual_budget - num_sinks, streaming_scores)
+
+    # ─── METHOD 3: H2O (O(n) Step Attention, Sinks + Recency + Heavy Hitters) ───
+    h2o_scores = np.zeros(seq_len)
+    for idx in range(num_sinks):
+        h2o_scores[idx] = 100.0 - idx * 10.0
+    for i in range(recency_window):
+        idx = seq_len - 1 - i
+        if idx >= num_sinks:
+            h2o_scores[idx] = 50.0 - i * 5.0
+
+    if mid_len > 0:
+        remaining_budget = max(0, actual_budget - num_sinks - recency_window)
+        num_h2o = min(mid_len, remaining_budget)
+        if num_h2o > 0:
+            np.random.seed(99)  # Different seed to simulate dynamic query-key matching
+            h2o_indices = np.random.choice(
+                range(mid_start, mid_end),
+                size=num_h2o,
+                replace=False
+            )
+            for idx in h2o_indices:
+                h2o_scores[idx] = 40.0 + np.random.uniform(-5, 5)
+
+    h2o_keep = set(np.argsort(h2o_scores)[-actual_budget:])
+    h2o_html = build_token_html(tokens, h2o_keep, num_sinks, seq_len, recency_window, h2o_scores)
+
+    # Build beautiful comparison panel
+    comparison_html = f"""
+    <div style="margin-bottom: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-weight: bold; color: #58a6ff; font-size: 14px;">⚡ Proactive Cache (O(1) Step Attention - Ours)</span>
+            <span class="badge" style="background: rgba(88, 166, 255, 0.15); border: 1px solid rgba(88, 166, 255, 0.4); color: #58a6ff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">Retains Sparse Semantic Anchors</span>
+        </div>
+        {proactive_html}
+    </div>
+
+    <div style="margin-bottom: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-weight: bold; color: #ffa500; font-size: 14px;">🔄 StreamingLLM (O(1) Step Attention - Baseline)</span>
+            <span class="badge" style="background: rgba(255, 165, 0, 0.15); border: 1px solid rgba(255, 165, 0, 0.4); color: #ffa500; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">Lost Mid-Context (Evicted)</span>
+        </div>
+        {streaming_html}
+    </div>
+
+    <div style="margin-bottom: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-weight: bold; color: #ff7b72; font-size: 14px;">🌊 H2O (O(n) Step Attention - Baseline)</span>
+            <span class="badge" style="background: rgba(248, 81, 73, 0.15); border: 1px solid rgba(248, 81, 73, 0.4); color: #ff7b72; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">Dynamic Matching (Heavy Step Overhead)</span>
+        </div>
+        {h2o_html}
+    </div>
+    """
 
     # Dynamic metrics calculation based on scaling numbers
     vram_saved = compression_ratio * 100
@@ -273,7 +378,7 @@ def run_simulator(prompt_choice, prompt_custom, compression_ratio, budget):
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">
             <span style="display: inline-block; width: 12px; height: 12px; background: rgba(88, 166, 255, 0.2); border: 1px solid #58a6ff; border-radius: 3px;"></span>
-            <span>Semantic Prototype (Keep)</span>
+            <span>Semantic Keep</span>
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">
             <span style="display: inline-block; width: 12px; height: 12px; background: rgba(57, 255, 20, 0.2); border: 1px solid #39ff14; border-radius: 3px;"></span>
@@ -286,9 +391,8 @@ def run_simulator(prompt_choice, prompt_custom, compression_ratio, budget):
     </div>
     """
 
-    final_html = "".join(html_out) + legend_html
+    final_html = comparison_html + legend_html
 
-    # Format return cards
     vram_saved_card = f"""
     <div class="metric-card">
         <span style="font-size: 13px; color: #8b949e;">KV CACHE MEMORY SAVED</span>
