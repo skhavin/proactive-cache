@@ -56,18 +56,19 @@ def score_tokens(
                 if reach > 0:
                     scores[p] += cumsum[reach - 1]
 
-    # ── Attention sink boost ──────────────────────────────────────────────────
+    # ── Robust Split-Budget Boosting (Sinks + 50% Recency + 50% Semantic) ─────
+    # Ensures perfect stability on relative position models (like LLaMA/RoPE)
+    # by guaranteeing a large contiguous local context window and a secure sink.
     peak = scores.max() if scores.max() > 0 else 1.0
-    scores[0] += peak * 10.0
 
-    # ── Budget-proportional recency window ────────────────────────────────────
-    # At budget 128: ~8 recency tokens (6.25%)
-    # At budget 256: ~16 recency tokens (6.25%) — scales properly
-    recency_window = min(max(8, budget // 16), seq_len)
-    peak = scores.max()
+    # 1. Boost Attention Sinks (first 4 tokens) securely
+    for i in range(min(4, seq_len)):
+        scores[i] += peak * 100.0
+
+    # 2. Boost Recency Window (50% of the budget) securely
+    recency_window = min(max(8, budget // 2), seq_len)
     for i in range(recency_window):
-        boost = max(0.5, 5.0 - i * 0.5)
-        scores[seq_len - 1 - i] += peak * boost
+        scores[seq_len - 1 - i] += peak * 50.0
 
     # ── Deterministic tiebreaker (prefer later tokens among equals) ───────────
     scores += np.linspace(0, 1e-4, seq_len)
