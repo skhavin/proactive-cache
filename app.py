@@ -166,33 +166,55 @@ def run_simulator(prompt_choice, prompt_custom, compression_ratio, budget):
     tokens = text.split()
     seq_len = len(tokens)
 
-    # Calculate actual budget based on compression ratio if custom is not provided
-    if budget <= 0 or budget >= seq_len:
-        budget = max(4, int(seq_len * (1.0 - compression_ratio)))
+    if seq_len == 0:
+        return (
+            "<div class='token-container' style='color: #f85149; font-weight: bold;'>Please enter some non-empty custom text!</div>",
+            "<div class='metric-card'><span style='font-size: 13px; color: #8b949e;'>KV CACHE MEMORY SAVED</span><div class='metric-val val-green'>0%</div></div>",
+            "<div class='metric-card'><span style='font-size: 13px; color: #8b949e;'>DECODE SPEEDUP</span><div class='metric-val val-blue'>1.00x</div></div>",
+            "<div class='metric-card'><span style='font-size: 13px; color: #8b949e;'>ACTIVE KV SIZE / TOTAL</span><div class='metric-val val-orange'>0 / 0</div></div>"
+        )
 
-    # Generate deterministic mock scores
-    # Sinks (first 2 tokens)
+    # Adjust budget dynamically to not exceed sequence length
+    actual_budget = budget
+    if actual_budget <= 0 or actual_budget >= seq_len:
+        actual_budget = max(1, int(seq_len * (1.0 - compression_ratio)))
+    actual_budget = min(actual_budget, seq_len)
+
+    # Initialize scores
     scores = np.zeros(seq_len)
-    scores[0] = 100.0
-    scores[1] = 90.0
 
-    # Recency window (last 6.25% of tokens)
-    recency_window = max(4, budget // 8)
+    # 1. Define Attention Sinks (first min(2, seq_len) tokens)
+    num_sinks = min(2, seq_len)
+    for idx in range(num_sinks):
+        scores[idx] = 100.0 - idx * 10.0
+
+    # 2. Define Recency Window (last tokens)
+    recency_window = max(1, min(seq_len - num_sinks, actual_budget // 8)) if seq_len > num_sinks else 0
     for i in range(recency_window):
-        scores[seq_len - 1 - i] = 50.0 - i * 5.0
+        idx = seq_len - 1 - i
+        if idx >= num_sinks:
+            scores[idx] = 50.0 - i * 5.0
 
-    # Semantic prototypes (simulating cluster matches)
-    np.random.seed(42)
-    proto_indices = np.random.choice(
-        range(2, seq_len - recency_window),
-        size=max(2, budget - 2 - recency_window),
-        replace=False
-    )
-    for idx in proto_indices:
-        scores[idx] = 40.0 + np.random.uniform(-5, 5)
+    # 3. Define Semantic Prototypes for some of the remaining mid-tokens
+    mid_start = num_sinks
+    mid_end = seq_len - recency_window
+    mid_len = mid_end - mid_start
 
-    # Deterministic selection
-    keep_indices = set(np.argsort(scores)[-budget:])
+    if mid_len > 0:
+        remaining_budget = max(0, actual_budget - num_sinks - recency_window)
+        num_protos = min(mid_len, remaining_budget)
+        if num_protos > 0:
+            np.random.seed(42)
+            proto_indices = np.random.choice(
+                range(mid_start, mid_end),
+                size=num_protos,
+                replace=False
+            )
+            for idx in proto_indices:
+                scores[idx] = 40.0 + np.random.uniform(-5, 5)
+
+    # Deterministic selection based on budget
+    keep_indices = set(np.argsort(scores)[-actual_budget:])
 
     # Generate beautiful HTML output
     html_out = ['<div class="token-container">']
@@ -201,7 +223,7 @@ def run_simulator(prompt_choice, prompt_custom, compression_ratio, budget):
         safe_tok = tok.replace("<", "&lt;").replace(">", "&gt;")
         
         if idx in keep_indices:
-            if idx < 2:
+            if idx < num_sinks:
                 # Attention Sink
                 html_out.append(f'<span class="tok tok-keep-sink" title="Attention Sink (Score: {scores[idx]:.1f})">{safe_tok}</span>')
             elif idx >= seq_len - recency_window:
@@ -268,7 +290,7 @@ def run_simulator(prompt_choice, prompt_custom, compression_ratio, budget):
     cache_size_card = f"""
     <div class="metric-card">
         <span style="font-size: 13px; color: #8b949e;">ACTIVE KV SIZE / TOTAL</span>
-        <div class="metric-val val-orange">{budget} / {seq_len}</div>
+        <div class="metric-val val-orange">{actual_budget} / {seq_len}</div>
         <span style="font-size: 11px; color: #8b949e;">Tokens kept in active cache</span>
     </div>
     """
