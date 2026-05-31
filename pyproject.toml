@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "proactive-cache"
-version = "0.1.0"
+version = "0.3.0"
 description = "Make any HuggingFace transformer O(n) with proactive KV cache eviction"
 readme = "README.md"
 license = { file = "LICENSE" }
