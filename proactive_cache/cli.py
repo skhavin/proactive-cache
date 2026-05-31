@@ -125,13 +125,52 @@ output = model.generate(input_ids, max_new_tokens=100)""")
         print(f"\n[!] Error loading or profiling model: {e}")
         print("Please verify the model ID is correct and fits in your system memory/VRAM.")
 
+def run_info_mode():
+    import proactive_cache
+    print("\n" + "="*60)
+    print(" ℹ️ PROACTIVE CACHE — SYSTEM & LIBRARY INFORMATION ")
+    print("="*60)
+    print(f"  Library Name:      proactive-cache")
+    print(f"  Installed Version: {proactive_cache.__version__}")
+    print(f"  License:           GNU Affero General Public License v3 (AGPLv3)")
+    print(f"  Package Location:  {os.path.dirname(os.path.abspath(proactive_cache.__file__))}")
+    
+    print("\n[ Environment Status ]")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"  CUDA Available:    {torch.cuda.is_available()}")
+    if torch.cuda.is_available():
+        print(f"  Active GPU:        {torch.cuda.get_device_name(0)}")
+    print(f"  Default Device:    {device}")
+    
+    print("\n[ Local Hugging Face Cache ]")
+    cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
+    print(f"  Cache Directory:   {cache_dir}")
+    models = find_cached_models()
+    print(f"  Cached Models:     {len(models)}")
+    if models:
+        for idx, model_id in enumerate(models, 1):
+            print(f"    - {model_id}")
+            
+    print("\n[ Authors & References ]")
+    print(f"  Author:            {proactive_cache.__author__}")
+    print(f"  GitHub Code:       https://github.com/skhavin/proactive-cache")
+    print(f"  Methodology Repo:  https://github.com/skhavin/supertransformers")
+    
+    print("\n[ CLI Commands ]")
+    print(f"  proactive-cache --easy    Run interactive local calibration and prototyping.")
+    print(f"  proactive-cache --info    Display this environment information screen.")
+    print("="*60 + "\n")
+
 def main():
     if "--easy" in sys.argv:
         run_easy_mode()
+    elif "--info" in sys.argv:
+        run_info_mode()
     else:
         print("\nProactive Cache Command-Line Tool")
         print("Usage:")
         print("  proactive-cache --easy      Scan local HuggingFace cache and run automated calibration.")
+        print("  proactive-cache --info      Display detailed system and library information.")
 
 if __name__ == "__main__":
     main()
