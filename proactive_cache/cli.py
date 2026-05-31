@@ -27,7 +27,7 @@ def find_cached_models():
 
 def run_easy_mode():
     print("\n" + "="*60)
-    print(" 🚀 PROACTIVE CACHE — EASY CALIBRATION & PROTOTYPING ")
+    print(" PROACTIVE CACHE — EASY CALIBRATION & PROTOTYPING ")
     print("="*60)
     print("Scanning your local Hugging Face cache for downloaded models...")
     
@@ -100,7 +100,7 @@ def run_easy_mode():
         )
         
         print("\n" + "="*60)
-        print(" 🎉 CALIBRATION SUCCESSFUL! PROTOTYPES GENERATED!")
+        print(" CALIBRATION SUCCESSFUL! PROTOTYPES GENERATED!")
         print("="*60)
         print(f"Prototypes saved to: {os.path.abspath(save_path)}")
         print("\nHere is the exact Python syntax to run this model in O(1) step time:")
@@ -128,7 +128,7 @@ output = model.generate(input_ids, max_new_tokens=100)""")
 def run_info_mode():
     import proactive_cache
     print("\n" + "="*60)
-    print(" ℹ️ PROACTIVE CACHE — SYSTEM & LIBRARY INFORMATION ")
+    print(" PROACTIVE CACHE — SYSTEM & LIBRARY INFORMATION ")
     print("="*60)
     print(f"  Library Name:      proactive-cache")
     print(f"  Installed Version: {proactive_cache.__version__}")
