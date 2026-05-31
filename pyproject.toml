@@ -35,6 +35,9 @@ dev = ["pytest>=7.0", "pytest-cov", "ruff"]
 kvpress = ["kvpress"]
 gradio = ["gradio>=4.0", "spaces"]
 
+[project.scripts]
+proactive-cache = "proactive_cache.cli:main"
+
 [project.urls]
 Homepage = "https://github.com/skhavin/proactive-cache"
 Repository = "https://github.com/skhavin/proactive-cache"
