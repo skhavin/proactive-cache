@@ -11,7 +11,7 @@ from .prototypes import build_prototypes, load_prototypes, save_prototypes
 from .profiler import profile_model
 from .press import ProactiveCachePress
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __author__ = "Khavin S"
 
 __all__ = [
